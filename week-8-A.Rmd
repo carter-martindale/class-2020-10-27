@@ -8,6 +8,7 @@ knitr::opts_chunk$set(echo = FALSE)
 library(PPBDS.data)
 library(rstanarm)
 library(tidyverse)
+library(ggthemes)
 
 # Recall that Enos (2014) actually looks at a measure of change in attitude
 # toward immigration, rather than simply at the ending attitude. Let's create
@@ -28,28 +29,81 @@ Weeks 7, 8 and 9 are the core of the class. We have a question. We have some dat
 
 **Prompt:** Let's estimate and interpret three models. In each case, `att_chg` is the outcome variable, the thing we are trying to understand and explain. Use `stan_glm()` to create and print a model with `att_chg` (the dependent or outcome variable) as a function of the indicated independent (or predictor) variable. Do not use an intercept. In each case, write three sentences of interpretation, with a special focus on whether the model is predictive or causal. For causal models, indicate how you might estimate the causal effect.
 
+
 * `att_chg` as a function of `gender`
 
+```{r s1}
+
+fit_gender <- stan_glm(att_chg ~ gender - 1,
+         data = week_8,
+         refresh = 0)
+
+```
+The median estimate for the change in attitude for males is -0.2 and for females it is 0.1. That means that the estimate median attitude of men got more 0.2 points more liberal, whereas the estimate median attitude for females got more conservative by 0.1 points. This model is not causal since your gender does not determine your political ideas, whereas we can use this as a predictive model.
 
 * `att_chg` as a function of `liberal`
 
+```{r}
+fit_liberal <- stan_glm(att_chg ~ liberal - 1,
+         data = week_8,
+         refresh = 0)
+```
+The median estimate for the change in attitude for liberals is 0.0 and for non-liberals it is -0.1. That means that the estimate median attitude of liberals stayed about the same, whereas the estimate median attitude for non-liberals got more liberal by 0.1. This model is probably predictive, but it could possibly be causal since your idealogy does determine how you feel about certain issues. 
 
 * `att_chg` as a function of `treatment`
 
-
-
+```{r}
+fit_treatment <- stan_glm(att_chg ~ treatment - 1,
+         data = week_8,
+         refresh = 0)
+```
+The median estimate for the change in attitude for those treated is 0.4 and for the control group it is -0.4. That means that the estimate median attitude of those of the treated group got more ____, whereas the estimate median attitude for the control group got more _____. This model is causal. 
 
 
 ## Scene 2
 
 **Prompt:** For the model with `att_chg` as a function of `treatment`, create posterior probability densities for the two important parameters. Write a paragraph interpreting the meaning of those posteriors. 
 
+```{r}
+fit_treatment %>% 
+  as_tibble() %>% 
+  pivot_longer(cols = 1:2,
+               names_to = "treatment",
+               values_to = "values") %>% 
+  ggplot(aes(x = values, y = after_stat(count/sum(count)),
+             fill = treatment)) +
+  geom_density() +
+  # geom_histogram(bins = 100, alpha = 0.6,
+  #                position = "identity") +
+  theme_classic() +
+  labs(title = "Posterior Probability Distribution",
+       subtitle = "Average change in attitude toward immigration on -12 to 12 scale",
+       x = "Average Attitude Change",
+       y = "Probability") +
+  scale_fill_discrete(name = "Group",
+                      labels = c("Control",
+                                 "Treatment"))
+```
 
 
 
 ## Scene 3
 
 **Prompt:** Create a plot of the the posterior for the average treatment effect. Write a paragraph interpreting the plot.
+
+```{r}
+fit_treatment %>% 
+  as_tibble() %>% 
+  mutate(ate = treatmentTreated - treatmentControl) %>% 
+  ggplot(aes(x = ate)) +
+    geom_histogram(aes(y = after_stat(count/sum(count))),
+                   bins = 100) +
+    labs(title = "Posterior Probability Distribution for ATE",
+         subtitle = "Exposure to Spanish-speakers shifts immigration attitudes rightward",
+         x = "Difference in Attitude",
+         y = "Probability") +
+    theme_classic()
+```
 
 
 
